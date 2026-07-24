@@ -1,0 +1,2385 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>VinDiPrompt's – Deine KI Prompt Bibliothek</title>
+<meta name="description" content="Persönliche Bibliothek für KI-Prompts: sammeln, organisieren, kopieren – offline und installierbar.">
+
+<!-- PWA -->
+<meta name="theme-color" content="#0B1020">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VinDiPrompt's">
+
+<!-- Fonts: Sora for display, Inter for UI/body -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================================
+   VinDiPrompt's — Design System
+   Palette:   #0B1020 (bg) · rgba(255,255,255,.08) (card) · rgba(255,255,255,.12) (border)
+              #4F8CFF (accent) · #7C5CFF (accent-2) · #FFFFFF (text) · #A9B7D5 (text-secondary)
+   Type:      Sora (display) + Inter (ui/body)
+   Radius:    18–22px
+   ========================================================================= */
+
+:root {
+  --bg: #0B1020;
+  --bg-elevated: #10182E;
+  --card: rgba(255, 255, 255, 0.08);
+  --card-hover: rgba(255, 255, 255, 0.11);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --accent: #4F8CFF;
+  --accent-2: #7C5CFF;
+  --text: #FFFFFF;
+  --text-secondary: #A9B7D5;
+  --text-tertiary: #6E7A99;
+  --danger: #FF6B6B;
+  --danger-strong: #E14F4F;
+  --success: #4FD1A5;
+
+  --radius-lg: 22px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 24px 80px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 0 3px rgba(79, 140, 255, 0.18);
+
+  --font-display: "Sora", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-base: 260ms;
+  --dur-slow: 420ms;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+/* [hidden] muss IMMER gewinnen — verhindert, dass unsichtbare Overlays
+   (Modals, Lightbox) trotzdem Klicks abfangen. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* =========================================================================
+   SIGNATURE ELEMENT — Ambient aurora backdrop
+   ========================================================================= */
+
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: radial-gradient(ellipse 120% 80% at 50% -10%, #141B34 0%, var(--bg) 55%);
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.35;
+  will-change: transform;
+}
+
+.blob--a {
+  width: 46vw; height: 46vw;
+  max-width: 620px; max-height: 620px;
+  top: -14vw; left: -10vw;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  animation: drift-a 26s ease-in-out infinite;
+}
+
+.blob--b {
+  width: 38vw; height: 38vw;
+  max-width: 520px; max-height: 520px;
+  top: 10vh; right: -12vw;
+  background: radial-gradient(circle, var(--accent-2) 0%, transparent 70%);
+  animation: drift-b 32s ease-in-out infinite;
+}
+
+.blob--c {
+  width: 34vw; height: 34vw;
+  max-width: 460px; max-height: 460px;
+  bottom: -14vw; left: 20vw;
+  background: radial-gradient(circle, #3FE0C5 0%, transparent 72%);
+  opacity: 0.18;
+  animation: drift-c 38s ease-in-out infinite;
+}
+
+@keyframes drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6vw, 8vh) scale(1.12); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-7vw, 6vh) scale(1.08); }
+}
+@keyframes drift-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5vw, -6vh) scale(1.15); }
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 3px 3px;
+  mix-blend-mode: overlay;
+}
+
+/* =========================================================================
+   LAYOUT SHELL
+   ========================================================================= */
+
+#app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 20px 40px;
+}
+
+/* =========================================================================
+   HEADER
+   ========================================================================= */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 4px 28px;
+  flex-wrap: wrap;
+}
+
+.topbar__identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.avatar-ring {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex: none;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(from var(--ring-angle, 0deg), var(--accent), var(--accent-2), #3FE0C5, var(--accent));
+  animation: spin-ring 6s linear infinite;
+  box-shadow: 0 0 22px rgba(79, 140, 255, 0.45);
+}
+
+@keyframes spin-ring {
+  to { --ring-angle: 360deg; }
+}
+
+@property --ring-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--bg);
+  background: var(--bg-elevated);
+}
+
+.topbar__titles { min-width: 0; }
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.brand__bolt {
+  filter: drop-shadow(0 0 10px rgba(79, 140, 255, 0.7));
+}
+
+.brand__subtitle {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =========================================================================
+   BUTTONS
+   ========================================================================= */
+
+.btn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 11px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+
+.btn:active { transform: scale(0.96); }
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
+  box-shadow: 0 6px 20px rgba(79, 140, 255, 0.35);
+}
+.btn--primary:hover { box-shadow: 0 8px 26px rgba(79, 140, 255, 0.5); transform: translateY(-1px); }
+
+.btn--secondary {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text);
+  border: 1px solid var(--card-border);
+}
+.btn--secondary:hover { background: rgba(255, 255, 255, 0.14); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.btn--ghost:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+.btn--danger {
+  background: rgba(255, 107, 107, 0.15);
+  color: #FF8A8A;
+  border: 1px solid rgba(255, 107, 107, 0.35);
+}
+.btn--danger:hover { background: rgba(255, 107, 107, 0.24); }
+
+.btn--sm { padding: 8px 16px; font-size: 13px; }
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  flex: none;
+}
+.icon-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+/* =========================================================================
+   DASHBOARD STATS
+   ========================================================================= */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--dur-base) var(--ease), background var(--dur-base) var(--ease);
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  background: var(--card-hover);
+}
+
+.stat-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: rgba(255,255,255,0.06);
+  flex: none;
+}
+
+.stat-card__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stat-card__value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-card__label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* =========================================================================
+   TOOLBAR: SEARCH + SORT
+   ========================================================================= */
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.search-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-pill);
+  padding: 12px 18px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: border-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
+}
+.search-field:focus-within {
+  border-color: rgba(79, 140, 255, 0.55);
+  box-shadow: var(--shadow-glow);
+}
+
+.search-field__icon { color: var(--text-tertiary); flex: none; }
+
+.search-field input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14.5px;
+  font-family: var(--font-body);
+  min-width: 0;
+}
+.search-field input:focus { outline: none; }
+.search-field input::placeholder { color: var(--text-tertiary); }
+
+/* Remove native search decorations */
+.search-field input[type="search"]::-webkit-search-decoration,
+.search-field input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.search-field__clear {
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex: none;
+  font-size: 12px;
+}
+
+.sort-field select {
+  height: 100%;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  padding: 12px 36px 12px 18px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'><path fill='%23A9B7D5' d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+.sort-field select:focus { outline: none; border-color: rgba(79, 140, 255, 0.55); }
+.sort-field select option { background: var(--bg-elevated); color: var(--text); }
+
+/* =========================================================================
+   CATEGORY CHIPS
+   ========================================================================= */
+
+.categories-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.chip-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 2px;
+  flex: 1;
+}
+.chip-scroll::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: none;
+  border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.chip:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+.chip.is-active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: white;
+}
+
+.chip--manage {
+  flex: none;
+  color: var(--text-secondary);
+  background: transparent;
+  border-style: dashed;
+}
+
+/* =========================================================================
+   PROMPT GRID + CARDS
+   ========================================================================= */
+
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.prompt-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--dur-base) var(--ease), background var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
+  animation: card-in var(--dur-slow) var(--ease) both;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.prompt-card:hover {
+  transform: translateY(-3px);
+  background: var(--card-hover);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.prompt-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.prompt-card__title {
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.prompt-card__fav-indicator {
+  flex: none;
+  font-size: 15px;
+  filter: drop-shadow(0 0 6px rgba(255,107,107,0.5));
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: rgba(79, 140, 255, 0.16);
+  color: #A9C8FF;
+  border: 1px solid rgba(79, 140, 255, 0.3);
+  width: fit-content;
+}
+
+.prompt-card__description {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.prompt-card__images {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.prompt-card__images::-webkit-scrollbar { display: none; }
+
+.prompt-card__thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex: none;
+  cursor: pointer;
+  border: 1px solid var(--card-border);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.prompt-card__thumb:hover { transform: scale(1.05); }
+
+.prompt-card__thumb-more {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1px solid var(--card-border);
+}
+
+.prompt-card__preview {
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-family: "SF Mono", ui-monospace, monospace;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-pill {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.prompt-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.card-action {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--dur-fast) var(--ease);
+}
+.card-action:hover { background: rgba(255,255,255,0.09); color: var(--text); transform: translateY(-1px); }
+.card-action.is-favorited { color: #FF6B6B; }
+.card-action--danger:hover { background: rgba(255,107,107,0.15); color: #FF8A8A; }
+.card-action.copy-success { color: var(--success); }
+
+/* =========================================================================
+   EMPTY STATE
+   ========================================================================= */
+
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 70px 20px;
+  color: var(--text-secondary);
+}
+.empty-state__glyph {
+  font-size: 42px;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 16px rgba(79,140,255,0.4));
+}
+.empty-state h2 {
+  font-family: var(--font-display);
+  color: var(--text);
+  font-size: 19px;
+  margin: 0 0 8px;
+}
+.empty-state p { margin: 0 0 20px; font-size: 14px; }
+
+/* =========================================================================
+   FOOTER
+   ========================================================================= */
+
+.app-footer {
+  text-align: center;
+  margin-top: 40px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+/* =========================================================================
+   MODALS
+   ========================================================================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 16, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  animation: overlay-in var(--dur-base) var(--ease) both;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .modal-overlay { align-items: center; padding: 24px; }
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  width: 100%;
+  max-width: 640px;
+  max-height: 92dvh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-modal);
+  animation: modal-in var(--dur-slow) var(--ease) both;
+}
+
+@media (min-width: 640px) {
+  .modal { border-radius: var(--radius-lg); max-height: 88dvh; }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal--large { max-width: 720px; }
+.modal--small { max-width: 420px; }
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex: none;
+}
+.modal__header h2 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin: 0;
+}
+
+.modal__body {
+  padding: 22px;
+  overflow-y: auto;
+}
+
+.modal__body--confirm { text-align: center; }
+.modal__body--confirm h2 { font-family: var(--font-display); font-size: 18px; margin: 0 0 8px; }
+.modal__body--confirm p { color: var(--text-secondary); font-size: 14px; margin: 0 0 20px; }
+.modal__body--confirm .modal__footer { padding: 0; border: none; justify-content: center; }
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* =========================================================================
+   FORMS
+   ========================================================================= */
+
+.form-group { margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end; }
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 7px;
+}
+label .hint { font-weight: 400; color: var(--text-tertiary); }
+
+input[type="text"], input[type="search"], textarea, select {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  resize: vertical;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+input[type="text"]:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: rgba(79,140,255,0.6);
+  box-shadow: var(--shadow-glow);
+}
+textarea { font-family: var(--font-body); }
+#promptText { font-family: "SF Mono", ui-monospace, monospace; font-size: 13.5px; line-height: 1.6; }
+
+.hint { font-size: 12px; color: var(--text-tertiary); margin: 6px 0 0; }
+
+.favorite-toggle {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+.favorite-toggle input { display: none; }
+.favorite-toggle__box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.05);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: all var(--dur-fast) var(--ease);
+}
+.favorite-toggle input:checked + .favorite-toggle__box {
+  background: rgba(255,107,107,0.16);
+  border-color: rgba(255,107,107,0.4);
+  color: #FF8A8A;
+}
+
+/* Image uploader */
+.image-uploader__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.image-uploader__thumb {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  cursor: grab;
+}
+.image-uploader__thumb img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.image-uploader__thumb.is-dragging { opacity: 0.4; }
+.image-uploader__remove {
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.image-uploader__add {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--card-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: center;
+  transition: all var(--dur-fast) var(--ease);
+}
+.image-uploader__add:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,140,255,0.06); }
+.image-uploader__add span { padding: 0 6px; }
+
+/* Category manager */
+.add-category-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.add-category-form input { flex: 1; }
+
+.category-list {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.category-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.category-list__name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+.category-list__count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  background: rgba(255,255,255,0.06);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+.category-list__edit-input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13.5px;
+}
+.category-list li .icon-btn { width: 32px; height: 32px; }
+
+/* Settings */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+}
+.settings-row--stack { align-items: flex-start; flex-wrap: wrap; }
+.settings-row h3 { font-size: 14.5px; margin: 0 0 4px; font-family: var(--font-display); font-weight: 600; }
+.settings-row .hint { margin: 0; max-width: 380px; }
+.divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 18px 0; }
+.settings-version { text-align: center; color: var(--text-tertiary); font-size: 11.5px; margin: 24px 0 0; }
+
+.switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch__track {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.12);
+  border-radius: var(--radius-pill);
+  transition: background var(--dur-base) var(--ease);
+  cursor: pointer;
+}
+.switch__thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform var(--dur-base) var(--ease);
+}
+.switch input:checked + .switch__track { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.switch input:checked + .switch__track .switch__thumb { transform: translateX(20px); }
+
+/* =========================================================================
+   LIGHTBOX
+   ========================================================================= */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(4,6,16,0.92);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: overlay-in var(--dur-base) var(--ease) both;
+}
+.lightbox__image {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  animation: modal-in var(--dur-base) var(--ease) both;
+}
+.lightbox__close {
+  position: absolute;
+  top: 20px; right: 20px;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+.lightbox__nav {
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 26px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.lightbox__nav--prev { left: 16px; }
+.lightbox__nav--next { right: 16px; }
+
+/* =========================================================================
+   TOASTS
+   ========================================================================= */
+
+.toast-stack {
+  position: fixed;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  z-index: 300;
+  width: min(92vw, 380px);
+}
+
+.toast {
+  background: rgba(20, 27, 52, 0.92);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 13px 18px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toast-in var(--dur-base) var(--ease) both;
+}
+.toast--success { border-color: rgba(79, 209, 165, 0.35); }
+.toast--error { border-color: rgba(255, 107, 107, 0.35); }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.toast.is-leaving {
+  animation: toast-out var(--dur-fast) var(--ease) both;
+}
+@keyframes toast-out {
+  to { opacity: 0; transform: translateY(8px) scale(0.96); }
+}
+
+/* =========================================================================
+   RESPONSIVE
+   ========================================================================= */
+
+@media (max-width: 860px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  #app { padding: 14px 14px 32px; }
+  .topbar { padding: 4px 0 20px; }
+  .brand { font-size: 19px; }
+  .topbar__actions .btn span { display: none; }
+  .btn--primary { padding: 11px 14px; }
+  .toolbar { flex-direction: column; }
+  .sort-field select { width: 100%; }
+  .prompt-grid { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 400px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat-card { padding: 14px; }
+}
+
+/* Landscape phones: tighten vertical rhythm */
+@media (max-height: 480px) and (orientation: landscape) {
+  .topbar { padding-bottom: 14px; }
+  .stats { margin-bottom: 14px; }
+}
+
+/* =========================================================================
+   OPTIONALER LIGHT-MODE
+   ---------------------------------------------------------------------
+   VinDiPrompt's ist als Premium-Dark-Mode-App konzipiert (siehe Brief).
+   Der Dark-Mode-Schalter in den Einstellungen bleibt trotzdem funktional:
+   hier ein dezenter, aufgehellter Kontrast-Modus statt eines kompletten
+   Zweit-Designs, damit die App nie ihre visuelle Identität verliert.
+   ========================================================================= */
+
+html.theme-light {
+  --bg: #F4F6FB;
+  --bg-elevated: #FFFFFF;
+  --card: rgba(11, 16, 32, 0.045);
+  --card-hover: rgba(11, 16, 32, 0.08);
+  --card-border: rgba(11, 16, 32, 0.10);
+  --text: #0B1020;
+  --text-secondary: #4B5773;
+  --text-tertiary: #7C879E;
+}
+
+html.theme-light .aurora {
+  background: radial-gradient(ellipse 120% 80% at 50% -10%, #E7ECFB 0%, var(--bg) 55%);
+}
+html.theme-light .blob { opacity: 0.22; }
+html.theme-light .grain { opacity: 0.4; }
+html.theme-light .sort-field select option { background: #FFFFFF; color: #0B1020; }
+html.theme-light .prompt-card__preview { background: rgba(11,16,32,0.04); color: var(--text-secondary); }
+
+</style>
+</head>
+<body>
+
+<!-- Ambient background signature: aurora blobs -->
+<div class="aurora" aria-hidden="true">
+  <span class="blob blob--a"></span>
+  <span class="blob blob--b"></span>
+  <span class="blob blob--c"></span>
+  <div class="grain"></div>
+</div>
+
+<div id="app">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="topbar">
+    <div class="topbar__identity">
+      <div class="avatar-ring">
+        <img id="profileAvatar" class="avatar" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTE2IiBoZWlnaHQ9IjExNiIgdmlld0JveD0iMCAwIDExNiAxMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjExNiIgeTI9IjExNiIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM0RjhDRkYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjN0M1Q0ZGIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSI1OCIgY3k9IjU4IiByPSI1OCIgZmlsbD0idXJsKCNnKSIvPgogIDx0ZXh0IHg9IjU4IiB5PSI3NiIgZm9udC1mYW1pbHk9IlNvcmEsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNmZmZmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlY8L3RleHQ+Cjwvc3ZnPgo=" alt="Profilbild" width="58" height="58">
+      </div>
+      <div class="topbar__titles">
+        <h1 class="brand"><span class="brand__bolt">⚡</span> VinDiPrompt's</h1>
+        <p class="brand__subtitle">Deine KI Prompt Bibliothek</p>
+      </div>
+    </div>
+    <div class="topbar__actions">
+      <button class="icon-btn" id="btnSettings" title="Einstellungen" aria-label="Einstellungen öffnen">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L1.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.14 7.14 0 0 0-.06.94c0 .32.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.4.32.6.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.24.1.5 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7"/></svg>
+      </button>
+      <button class="btn btn--primary" id="btnNewPrompt">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+        <span>Neuer Prompt</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <section class="stats" aria-label="Übersicht">
+      <div class="stat-card">
+        <div class="stat-card__icon stat-card__icon--categories">🗂️</div>
+        <div class="stat-card__body">
+          <span class="stat-card__value" id="statCategories">0</span>
+          <span class="stat-card__label">Kategorien</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__icon stat-card__icon--prompts">📝</div>
+        <div class="stat-card__body">
+          <span class="stat-card__value" id="statPrompts">0</span>
+          <span class="stat-card__label">Prompts</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__icon stat-card__icon--favorites">❤️</div>
+        <div class="stat-card__body">
+          <span class="stat-card__value" id="statFavorites">0</span>
+          <span class="stat-card__label">Favoriten</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__icon stat-card__icon--copied">📋</div>
+        <div class="stat-card__body">
+          <span class="stat-card__value" id="statCopiedToday">0</span>
+          <span class="stat-card__label">Heute kopiert</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TOOLBAR: SEARCH + FILTER + SORT ===================== -->
+    <section class="toolbar">
+      <div class="search-field">
+        <svg viewBox="0 0 24 24" width="18" height="18" class="search-field__icon"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9"/></svg>
+        <input type="search" id="searchInput" placeholder="Titel, Beschreibung, Kategorie, Tags oder Prompttext durchsuchen…" aria-label="Prompts durchsuchen">
+        <button class="search-field__clear" id="searchClear" aria-label="Suche löschen" hidden>✕</button>
+      </div>
+
+      <div class="sort-field">
+        <label for="sortSelect" class="sr-only">Sortierung</label>
+        <select id="sortSelect" aria-label="Sortierung wählen">
+          <option value="newest">Neueste</option>
+          <option value="oldest">Älteste</option>
+          <option value="alpha">Alphabetisch</option>
+          <option value="favorites">Favoriten</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- ===================== CATEGORY CHIPS ===================== -->
+    <section class="categories-row" aria-label="Kategorien filtern">
+      <div class="chip-scroll" id="categoryChips">
+        <!-- populated by JS -->
+      </div>
+      <button class="chip chip--manage" id="btnManageCategories">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+        Verwalten
+      </button>
+    </section>
+
+    <!-- ===================== PROMPT GRID ===================== -->
+    <section class="prompt-grid" id="promptGrid" aria-label="Prompts">
+      <!-- populated by JS -->
+    </section>
+
+    <!-- ===================== EMPTY STATE ===================== -->
+    <div class="empty-state" id="emptyState" hidden>
+      <div class="empty-state__glyph">✨</div>
+      <h2>Noch keine Prompts hier</h2>
+      <p>Leg deinen ersten Prompt an und bau dir deine eigene KI-Bibliothek auf.</p>
+      <button class="btn btn--primary" id="btnEmptyNewPrompt">Ersten Prompt erstellen</button>
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>VinDiPrompt's · lokal gespeichert auf diesem Gerät</p>
+  </footer>
+</div>
+
+<!-- ===================== PROMPT EDITOR MODAL ===================== -->
+<div class="modal-overlay" id="promptModalOverlay" hidden>
+  <div class="modal modal--large" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle">
+    <div class="modal__header">
+      <h2 id="promptModalTitle">Neuer Prompt</h2>
+      <button class="icon-btn" id="btnClosePromptModal" aria-label="Schließen">✕</button>
+    </div>
+    <div class="modal__body">
+      <form id="promptForm">
+        <input type="hidden" id="promptId">
+
+        <div class="form-group">
+          <label for="promptTitle">Titel</label>
+          <input type="text" id="promptTitle" placeholder="z. B. Cinematic Portrait Prompt" required maxlength="120">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="promptCategory">Kategorie</label>
+            <select id="promptCategory" required></select>
+          </div>
+          <div class="form-group form-group--favorite">
+            <label for="promptFavorite" class="favorite-toggle">
+              <input type="checkbox" id="promptFavorite">
+              <span class="favorite-toggle__box">❤️ Favorit</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="promptDescription">Beschreibung</label>
+          <textarea id="promptDescription" rows="2" placeholder="Kurze Beschreibung, wofür dieser Prompt gut ist" maxlength="280"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="promptTags">Tags <span class="hint">(mit Komma getrennt)</span></label>
+          <input type="text" id="promptTags" placeholder="z. B. portrait, cinematic, 8k">
+        </div>
+
+        <div class="form-group">
+          <label for="promptText">Prompt</label>
+          <textarea id="promptText" rows="7" placeholder="Der eigentliche Prompt-Text…" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Bilder</label>
+          <div class="image-uploader" id="imageUploader">
+            <div class="image-uploader__grid" id="imagePreviewGrid">
+              <!-- image thumbs injected here -->
+            </div>
+            <label class="image-uploader__add" for="imageFileInput">
+              <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+              <span>Bilder hinzufügen</span>
+            </label>
+            <input type="file" id="imageFileInput" accept="image/*" multiple hidden>
+          </div>
+          <p class="hint">Mehrfachauswahl möglich. Ziehen zum Umsortieren.</p>
+        </div>
+
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost" id="btnCancelPrompt">Abbrechen</button>
+          <button type="submit" class="btn btn--primary">Speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CATEGORY MANAGER MODAL ===================== -->
+<div class="modal-overlay" id="categoryModalOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle">
+    <div class="modal__header">
+      <h2 id="categoryModalTitle">Kategorien verwalten</h2>
+      <button class="icon-btn" id="btnCloseCategoryModal" aria-label="Schließen">✕</button>
+    </div>
+    <div class="modal__body">
+      <form class="add-category-form" id="addCategoryForm">
+        <input type="text" id="newCategoryName" placeholder="Neue Kategorie…" maxlength="40" required>
+        <button type="submit" class="btn btn--primary btn--sm">Hinzufügen</button>
+      </form>
+      <ul class="category-list" id="categoryList"><!-- populated by JS --></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SETTINGS MODAL ===================== -->
+<div class="modal-overlay" id="settingsModalOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="modal__header">
+      <h2 id="settingsModalTitle">Einstellungen</h2>
+      <button class="icon-btn" id="btnCloseSettingsModal" aria-label="Schließen">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="settings-row">
+        <div>
+          <h3>Dark Mode</h3>
+          <p class="hint">VinDiPrompt's ist für Dark Mode designt.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="darkModeToggle" checked>
+          <span class="switch__track"><span class="switch__thumb"></span></span>
+        </label>
+      </div>
+
+      <hr class="divider">
+
+      <div class="settings-row settings-row--stack">
+        <div>
+          <h3>Daten exportieren</h3>
+          <p class="hint">Speichert alle Kategorien und Prompts als JSON-Datei.</p>
+        </div>
+        <button class="btn btn--secondary btn--sm" id="btnExport">Export als JSON</button>
+      </div>
+
+      <div class="settings-row settings-row--stack">
+        <div>
+          <h3>Daten importieren</h3>
+          <p class="hint">Lädt eine zuvor exportierte JSON-Datei. Bestehende Daten werden ersetzt.</p>
+        </div>
+        <label class="btn btn--secondary btn--sm" for="importFileInput">Import wählen</label>
+        <input type="file" id="importFileInput" accept="application/json" hidden>
+      </div>
+
+      <hr class="divider">
+
+      <div class="settings-row settings-row--stack">
+        <div>
+          <h3>Alle Daten löschen</h3>
+          <p class="hint">Entfernt unwiderruflich alle Kategorien, Prompts und Bilder von diesem Gerät.</p>
+        </div>
+        <button class="btn btn--danger btn--sm" id="btnClearAll">Alle Daten löschen</button>
+      </div>
+
+      <p class="settings-version">VinDiPrompt's · Version 1.0.0</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== IMAGE LIGHTBOX ===================== -->
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lightbox__close" id="lightboxClose" aria-label="Schließen">✕</button>
+  <button class="lightbox__nav lightbox__nav--prev" id="lightboxPrev" aria-label="Vorheriges Bild">‹</button>
+  <img class="lightbox__image" id="lightboxImage" src="" alt="Prompt Bild">
+  <button class="lightbox__nav lightbox__nav--next" id="lightboxNext" aria-label="Nächstes Bild">›</button>
+</div>
+
+<!-- ===================== CONFIRM DIALOG ===================== -->
+<div class="modal-overlay" id="confirmOverlay" hidden>
+  <div class="modal modal--small" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal__body modal__body--confirm">
+      <h2 id="confirmTitle">Bist du sicher?</h2>
+      <p id="confirmMessage">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" id="confirmCancel">Abbrechen</button>
+        <button class="btn btn--danger" id="confirmOk">Löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TOASTS ===================== -->
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script>
+/* =========================================================================
+   VinDiPrompt's — Application Logic
+   Reines ES6, kein Framework. Modular aufgebaut in klar getrennte Bereiche:
+
+     1.  DataStore-Abstraktion (aktuell LocalStorage, später Supabase)
+     2.  Utilities
+     3.  App-State
+     4.  Rendering
+     5.  CRUD: Kategorien
+     6.  CRUD: Prompts
+     7.  Bilder-Upload & Reihenfolge
+     8.  Suche & Sortierung
+     9.  Kopieren & "Heute kopiert"-Zähler
+     10. Lightbox (Bildergalerie Vollbild)
+     11. Einstellungen (Export / Import / Reset / Dark Mode)
+     12. Modale Dialoge & Bestätigungen
+     13. Toast-Benachrichtigungen
+     14. Event-Wiring & Initialisierung
+     15. Service-Worker-Registrierung
+   ========================================================================= */
+
+"use strict";
+
+/* =========================================================================
+   1. DATASTORE-ABSTRAKTION
+   ---------------------------------------------------------------------
+   Alle Datenzugriffe laufen ausschließlich über das `DataStore`-Objekt.
+   So kann später der komplette Block durch Supabase-Aufrufe ersetzt
+   werden (z. B. supabase.from('prompts').select() usw.), ohne dass der
+   Rest der App (Rendering, CRUD-Handler, UI) angepasst werden muss.
+   Alle Methoden sind bewusst als `async` deklariert, obwohl LocalStorage
+   synchron ist — das hält die Schnittstelle 1:1 kompatibel zu einem
+   späteren Cloud-Backend.
+   ========================================================================= */
+
+const STORAGE_KEY = "vindiprompts.data.v1";
+const SETTINGS_KEY = "vindiprompts.settings.v1";
+const COPYLOG_KEY = "vindiprompts.copylog.v1";
+
+const DEFAULT_CATEGORIES = [
+  "Spaß", "Fotobearbeitung", "Videobearbeitung", "ChatGPT", "Gemini", "Claude", "Midjourney", "Sonstige"
+];
+
+const DataStore = {
+  /** Lädt den kompletten Datensatz { categories, prompts }. */
+  async load() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      const seeded = DataStore._seed();
+      await DataStore.save(seeded);
+      return seeded;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed.categories || !parsed.prompts) throw new Error("invalid shape");
+      return parsed;
+    } catch (e) {
+      console.warn("VinDiPrompt's: Datensatz beschädigt, setze zurück.", e);
+      const seeded = DataStore._seed();
+      await DataStore.save(seeded);
+      return seeded;
+    }
+  },
+
+  /** Speichert den kompletten Datensatz. */
+  async save(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return data;
+  },
+
+  /** Erste-Start-Standarddaten. */
+  _seed() {
+    return {
+      categories: DEFAULT_CATEGORIES.map((name) => ({ id: uid(), name })),
+      prompts: []
+    };
+  },
+
+  async loadSettings() {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      return raw ? JSON.parse(raw) : { darkMode: true };
+    } catch {
+      return { darkMode: true };
+    }
+  },
+
+  async saveSettings(settings) {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  },
+
+  async loadCopyLog() {
+    try {
+      const raw = localStorage.getItem(COPYLOG_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async saveCopyLog(log) {
+    localStorage.setItem(COPYLOG_KEY, JSON.stringify(log));
+  }
+};
+
+/* =========================================================================
+   2. UTILITIES
+   ========================================================================= */
+
+function uid() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
+function debounce(fn, delay = 200) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function isSameDay(iso, ref = new Date()) {
+  const d = new Date(iso);
+  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate();
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* =========================================================================
+   3. APP-STATE
+   ========================================================================= */
+
+const state = {
+  categories: [],
+  prompts: [],
+  settings: { darkMode: true },
+  copyLog: [],
+
+  activeCategoryId: "all",
+  searchTerm: "",
+  sortMode: "newest",
+
+  editingPromptId: null,
+  editingImages: [],       // { id, dataUrl } während Editor offen ist
+  draggedImageId: null,
+
+  lightboxImages: [],
+  lightboxIndex: 0
+};
+
+/* =========================================================================
+   4. RENDERING
+   ========================================================================= */
+
+const el = {
+  statCategories: document.getElementById("statCategories"),
+  statPrompts: document.getElementById("statPrompts"),
+  statFavorites: document.getElementById("statFavorites"),
+  statCopiedToday: document.getElementById("statCopiedToday"),
+  categoryChips: document.getElementById("categoryChips"),
+  promptGrid: document.getElementById("promptGrid"),
+  emptyState: document.getElementById("emptyState"),
+  searchInput: document.getElementById("searchInput"),
+  searchClear: document.getElementById("searchClear"),
+  sortSelect: document.getElementById("sortSelect"),
+
+  promptModalOverlay: document.getElementById("promptModalOverlay"),
+  promptModalTitle: document.getElementById("promptModalTitle"),
+  promptForm: document.getElementById("promptForm"),
+  promptId: document.getElementById("promptId"),
+  promptTitle: document.getElementById("promptTitle"),
+  promptCategory: document.getElementById("promptCategory"),
+  promptFavorite: document.getElementById("promptFavorite"),
+  promptDescription: document.getElementById("promptDescription"),
+  promptTags: document.getElementById("promptTags"),
+  promptText: document.getElementById("promptText"),
+  imagePreviewGrid: document.getElementById("imagePreviewGrid"),
+  imageFileInput: document.getElementById("imageFileInput"),
+
+  categoryModalOverlay: document.getElementById("categoryModalOverlay"),
+  addCategoryForm: document.getElementById("addCategoryForm"),
+  newCategoryName: document.getElementById("newCategoryName"),
+  categoryList: document.getElementById("categoryList"),
+
+  settingsModalOverlay: document.getElementById("settingsModalOverlay"),
+  darkModeToggle: document.getElementById("darkModeToggle"),
+  importFileInput: document.getElementById("importFileInput"),
+
+  lightbox: document.getElementById("lightbox"),
+  lightboxImage: document.getElementById("lightboxImage"),
+
+  confirmOverlay: document.getElementById("confirmOverlay"),
+  confirmTitle: document.getElementById("confirmTitle"),
+  confirmMessage: document.getElementById("confirmMessage"),
+  confirmOk: document.getElementById("confirmOk"),
+  confirmCancel: document.getElementById("confirmCancel"),
+
+  toastStack: document.getElementById("toastStack")
+};
+
+function categoryName(id) {
+  const c = state.categories.find((c) => c.id === id);
+  return c ? c.name : "Sonstige";
+}
+
+function renderStats() {
+  el.statCategories.textContent = state.categories.length;
+  el.statPrompts.textContent = state.prompts.length;
+  el.statFavorites.textContent = state.prompts.filter((p) => p.favorite).length;
+  el.statCopiedToday.textContent = state.copyLog.filter((ts) => isSameDay(ts)).length;
+}
+
+function renderCategoryChips() {
+  const frag = document.createDocumentFragment();
+
+  const allChip = document.createElement("button");
+  allChip.className = "chip" + (state.activeCategoryId === "all" ? " is-active" : "");
+  allChip.textContent = "Alle";
+  allChip.addEventListener("click", () => {
+    state.activeCategoryId = "all";
+    renderCategoryChips();
+    renderPromptGrid();
+  });
+  frag.appendChild(allChip);
+
+  state.categories.forEach((cat) => {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (state.activeCategoryId === cat.id ? " is-active" : "");
+    chip.textContent = cat.name;
+    chip.addEventListener("click", () => {
+      state.activeCategoryId = cat.id;
+      renderCategoryChips();
+      renderPromptGrid();
+    });
+    frag.appendChild(chip);
+  });
+
+  el.categoryChips.innerHTML = "";
+  el.categoryChips.appendChild(frag);
+}
+
+function renderCategorySelectOptions() {
+  el.promptCategory.innerHTML = state.categories
+    .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+    .join("");
+}
+
+function getFilteredSortedPrompts() {
+  let list = [...state.prompts];
+
+  if (state.activeCategoryId !== "all") {
+    list = list.filter((p) => p.categoryId === state.activeCategoryId);
+  }
+
+  const term = state.searchTerm.trim().toLowerCase();
+  if (term) {
+    list = list.filter((p) => {
+      const haystack = [
+        p.title,
+        p.description,
+        categoryName(p.categoryId),
+        (p.tags || []).join(" "),
+        p.promptText
+      ].join(" ").toLowerCase();
+      return haystack.includes(term);
+    });
+  }
+
+  switch (state.sortMode) {
+    case "oldest":
+      list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      break;
+    case "alpha":
+      list.sort((a, b) => a.title.localeCompare(b.title, "de"));
+      break;
+    case "favorites":
+      list.sort((a, b) => (b.favorite === a.favorite ? new Date(b.createdAt) - new Date(a.createdAt) : b.favorite - a.favorite));
+      break;
+    case "newest":
+    default:
+      list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  return list;
+}
+
+function renderPromptGrid() {
+  const list = getFilteredSortedPrompts();
+  el.promptGrid.innerHTML = "";
+
+  if (list.length === 0) {
+    el.emptyState.hidden = false;
+    el.emptyState.querySelector("h2").textContent = state.prompts.length === 0
+      ? "Noch keine Prompts hier"
+      : "Keine Treffer";
+    el.emptyState.querySelector("p").textContent = state.prompts.length === 0
+      ? "Leg deinen ersten Prompt an und bau dir deine eigene KI-Bibliothek auf."
+      : "Passe deine Suche oder den Kategoriefilter an.";
+    el.emptyState.querySelector("#btnEmptyNewPrompt").style.display = state.prompts.length === 0 ? "" : "none";
+    return;
+  }
+  el.emptyState.hidden = true;
+
+  const frag = document.createDocumentFragment();
+  list.forEach((p, i) => frag.appendChild(buildPromptCard(p, i)));
+  el.promptGrid.appendChild(frag);
+}
+
+function buildPromptCard(p, index) {
+  const card = document.createElement("article");
+  card.className = "prompt-card";
+  card.style.animationDelay = `${Math.min(index, 8) * 35}ms`;
+  card.dataset.id = p.id;
+
+  const images = p.images || [];
+  const visibleImages = images.slice(0, 4);
+  const extraCount = images.length - visibleImages.length;
+
+  card.innerHTML = `
+    <div class="prompt-card__header">
+      <h3 class="prompt-card__title">${escapeHtml(p.title)}</h3>
+      ${p.favorite ? '<span class="prompt-card__fav-indicator" title="Favorit">❤️</span>' : ""}
+    </div>
+    <span class="badge">${escapeHtml(categoryName(p.categoryId))}</span>
+    ${p.description ? `<p class="prompt-card__description">${escapeHtml(p.description)}</p>` : ""}
+    ${images.length ? `
+      <div class="prompt-card__images">
+        ${visibleImages.map((img, idx) => `<img class="prompt-card__thumb" src="${img.dataUrl}" data-img-index="${idx}" alt="Bild zu ${escapeHtml(p.title)}">`).join("")}
+        ${extraCount > 0 ? `<div class="prompt-card__thumb-more">+${extraCount}</div>` : ""}
+      </div>
+    ` : ""}
+    <pre class="prompt-card__preview">${escapeHtml(p.promptText)}</pre>
+    ${(p.tags && p.tags.length) ? `
+      <div class="prompt-card__tags">
+        ${p.tags.map((t) => `<span class="tag-pill">#${escapeHtml(t)}</span>`).join("")}
+      </div>
+    ` : ""}
+    <div class="prompt-card__footer">
+      <button class="card-action card-action--copy" title="Prompt kopieren" aria-label="Prompt kopieren">📋</button>
+      <button class="card-action card-action--edit" title="Bearbeiten" aria-label="Bearbeiten">✏️</button>
+      <button class="card-action card-action--fav ${p.favorite ? "is-favorited" : ""}" title="Favorit" aria-label="Favorit umschalten">${p.favorite ? "❤️" : "🤍"}</button>
+      <button class="card-action card-action--danger card-action--delete" title="Löschen" aria-label="Löschen">🗑</button>
+    </div>
+  `;
+
+  card.querySelector(".card-action--copy").addEventListener("click", (e) => copyPromptText(p, e.currentTarget));
+  card.querySelector(".card-action--edit").addEventListener("click", () => openPromptModal(p.id));
+  card.querySelector(".card-action--fav").addEventListener("click", () => toggleFavorite(p.id));
+  card.querySelector(".card-action--delete").addEventListener("click", () => handleDeletePrompt(p.id));
+
+  card.querySelectorAll(".prompt-card__thumb").forEach((thumbEl) => {
+    thumbEl.addEventListener("click", () => {
+      openLightbox(images, Number(thumbEl.dataset.imgIndex));
+    });
+  });
+
+  return card;
+}
+
+async function renderAll() {
+  renderStats();
+  renderCategoryChips();
+  renderCategorySelectOptions();
+  renderPromptGrid();
+}
+
+/* =========================================================================
+   5. CRUD: KATEGORIEN
+   ========================================================================= */
+
+async function persist() {
+  await DataStore.save({ categories: state.categories, prompts: state.prompts });
+}
+
+function renderCategoryManagerList() {
+  el.categoryList.innerHTML = "";
+  state.categories.forEach((cat) => {
+    const count = state.prompts.filter((p) => p.categoryId === cat.id).length;
+    const li = document.createElement("li");
+    li.dataset.id = cat.id;
+    li.innerHTML = `
+      <span class="category-list__name">${escapeHtml(cat.name)}</span>
+      <span class="category-list__count">${count}</span>
+      <button class="icon-btn category-list__edit" title="Umbenennen" aria-label="Umbenennen">✏️</button>
+      <button class="icon-btn category-list__delete" title="Löschen" aria-label="Löschen">🗑</button>
+    `;
+    li.querySelector(".category-list__edit").addEventListener("click", () => startEditCategory(cat.id));
+    li.querySelector(".category-list__delete").addEventListener("click", () => handleDeleteCategory(cat.id));
+    el.categoryList.appendChild(li);
+  });
+}
+
+function startEditCategory(catId) {
+  const li = el.categoryList.querySelector(`li[data-id="${catId}"]`);
+  const cat = state.categories.find((c) => c.id === catId);
+  if (!li || !cat) return;
+  li.innerHTML = `
+    <input type="text" class="category-list__edit-input" value="${escapeHtml(cat.name)}" maxlength="40">
+    <button class="icon-btn category-list__save" title="Speichern" aria-label="Speichern">✔️</button>
+    <button class="icon-btn category-list__cancel" title="Abbrechen" aria-label="Abbrechen">✕</button>
+  `;
+  const input = li.querySelector("input");
+  input.focus();
+  input.select();
+
+  const save = async () => {
+    const newName = input.value.trim();
+    if (newName) {
+      cat.name = newName;
+      await persist();
+      showToast(`Kategorie umbenannt zu „${newName}"`, "success");
+    }
+    renderCategoryManagerList();
+    renderAll();
+  };
+
+  li.querySelector(".category-list__save").addEventListener("click", save);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+    if (e.key === "Escape") renderCategoryManagerList();
+  });
+  li.querySelector(".category-list__cancel").addEventListener("click", () => renderCategoryManagerList());
+}
+
+async function handleDeleteCategory(catId) {
+  const cat = state.categories.find((c) => c.id === catId);
+  if (!cat) return;
+
+  const affected = state.prompts.filter((p) => p.categoryId === catId).length;
+  const ok = await confirmDialog(
+    "Kategorie löschen?",
+    affected > 0
+      ? `„${cat.name}" wird gelöscht. ${affected} Prompt(s) werden nach „Sonstige" verschoben.`
+      : `„${cat.name}" wirklich löschen?`
+  );
+  if (!ok) return;
+
+  let fallback = state.categories.find((c) => c.name === "Sonstige" && c.id !== catId);
+  if (!fallback) {
+    fallback = { id: uid(), name: "Sonstige" };
+    state.categories.push(fallback);
+  }
+
+  state.prompts.forEach((p) => {
+    if (p.categoryId === catId) p.categoryId = fallback.id;
+  });
+  state.categories = state.categories.filter((c) => c.id !== catId);
+
+  await persist();
+  renderCategoryManagerList();
+  renderAll();
+  showToast(`Kategorie „${cat.name}" gelöscht`, "success");
+}
+
+el.addCategoryForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = el.newCategoryName.value.trim();
+  if (!name) return;
+  if (state.categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+    showToast("Diese Kategorie existiert bereits", "error");
+    return;
+  }
+  state.categories.push({ id: uid(), name });
+  await persist();
+  el.newCategoryName.value = "";
+  renderCategoryManagerList();
+  renderAll();
+  showToast(`Kategorie „${name}" hinzugefügt`, "success");
+});
+
+/* =========================================================================
+   6. CRUD: PROMPTS
+   ========================================================================= */
+
+function openPromptModal(promptId = null) {
+  state.editingPromptId = promptId;
+  const isEdit = Boolean(promptId);
+  const p = isEdit ? state.prompts.find((x) => x.id === promptId) : null;
+
+  el.promptModalTitle.textContent = isEdit ? "Prompt bearbeiten" : "Neuer Prompt";
+  el.promptId.value = promptId || "";
+  el.promptTitle.value = p ? p.title : "";
+  el.promptDescription.value = p ? p.description || "" : "";
+  el.promptTags.value = p ? (p.tags || []).join(", ") : "";
+  el.promptText.value = p ? p.promptText : "";
+  el.promptFavorite.checked = p ? Boolean(p.favorite) : false;
+
+  renderCategorySelectOptions();
+  el.promptCategory.value = p ? p.categoryId : (state.categories[0] && state.categories[0].id) || "";
+
+  state.editingImages = p && p.images ? p.images.map((img) => ({ ...img })) : [];
+  renderImagePreviewGrid();
+
+  openOverlay(el.promptModalOverlay);
+  setTimeout(() => el.promptTitle.focus(), 50);
+}
+
+function closePromptModal() {
+  closeOverlay(el.promptModalOverlay);
+  el.promptForm.reset();
+  state.editingPromptId = null;
+  state.editingImages = [];
+}
+
+el.promptForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const title = el.promptTitle.value.trim();
+  const promptText = el.promptText.value.trim();
+  if (!title || !promptText) {
+    showToast("Titel und Prompt sind erforderlich", "error");
+    return;
+  }
+
+  const tags = el.promptTags.value
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  const now = new Date().toISOString();
+
+  if (state.editingPromptId) {
+    const p = state.prompts.find((x) => x.id === state.editingPromptId);
+    if (p) {
+      p.title = title;
+      p.categoryId = el.promptCategory.value;
+      p.description = el.promptDescription.value.trim();
+      p.tags = tags;
+      p.promptText = promptText;
+      p.favorite = el.promptFavorite.checked;
+      p.images = state.editingImages;
+      p.updatedAt = now;
+      showToast("Prompt aktualisiert", "success");
+    }
+  } else {
+    state.prompts.push({
+      id: uid(),
+      title,
+      categoryId: el.promptCategory.value,
+      description: el.promptDescription.value.trim(),
+      tags,
+      promptText,
+      favorite: el.promptFavorite.checked,
+      images: state.editingImages,
+      createdAt: now,
+      updatedAt: now
+    });
+    showToast("Prompt erstellt", "success");
+  }
+
+  await persist();
+  closePromptModal();
+  renderAll();
+});
+
+async function toggleFavorite(promptId) {
+  const p = state.prompts.find((x) => x.id === promptId);
+  if (!p) return;
+  p.favorite = !p.favorite;
+  p.updatedAt = new Date().toISOString();
+  await persist();
+  renderAll();
+}
+
+async function handleDeletePrompt(promptId) {
+  const p = state.prompts.find((x) => x.id === promptId);
+  if (!p) return;
+  const ok = await confirmDialog("Prompt löschen?", `„${p.title}" wird endgültig gelöscht.`);
+  if (!ok) return;
+  state.prompts = state.prompts.filter((x) => x.id !== promptId);
+  await persist();
+  renderAll();
+  showToast("Prompt gelöscht", "success");
+}
+
+/* =========================================================================
+   7. BILDER-UPLOAD & REIHENFOLGE (Drag & Drop)
+   ========================================================================= */
+
+function renderImagePreviewGrid() {
+  el.imagePreviewGrid.innerHTML = "";
+  state.editingImages.forEach((img) => {
+    const thumb = document.createElement("div");
+    thumb.className = "image-uploader__thumb";
+    thumb.draggable = true;
+    thumb.dataset.id = img.id;
+    thumb.innerHTML = `
+      <img src="${img.dataUrl}" alt="Vorschau">
+      <button type="button" class="image-uploader__remove" aria-label="Bild entfernen">✕</button>
+    `;
+
+    thumb.querySelector(".image-uploader__remove").addEventListener("click", () => {
+      state.editingImages = state.editingImages.filter((i) => i.id !== img.id);
+      renderImagePreviewGrid();
+    });
+
+    thumb.addEventListener("dragstart", () => {
+      state.draggedImageId = img.id;
+      thumb.classList.add("is-dragging");
+    });
+    thumb.addEventListener("dragend", () => {
+      thumb.classList.remove("is-dragging");
+      state.draggedImageId = null;
+    });
+    thumb.addEventListener("dragover", (e) => e.preventDefault());
+    thumb.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (!state.draggedImageId || state.draggedImageId === img.id) return;
+      const fromIdx = state.editingImages.findIndex((i) => i.id === state.draggedImageId);
+      const toIdx = state.editingImages.findIndex((i) => i.id === img.id);
+      const [moved] = state.editingImages.splice(fromIdx, 1);
+      state.editingImages.splice(toIdx, 0, moved);
+      renderImagePreviewGrid();
+    });
+
+    el.imagePreviewGrid.appendChild(thumb);
+  });
+}
+
+el.imageFileInput.addEventListener("change", async (e) => {
+  const files = Array.from(e.target.files || []);
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) continue;
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      state.editingImages.push({ id: uid(), dataUrl });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  renderImagePreviewGrid();
+  e.target.value = "";
+});
+
+/* =========================================================================
+   8. SUCHE & SORTIERUNG
+   ========================================================================= */
+
+el.searchInput.addEventListener("input", debounce((e) => {
+  state.searchTerm = e.target.value;
+  el.searchClear.hidden = state.searchTerm.length === 0;
+  renderPromptGrid();
+}, 150));
+
+el.searchClear.addEventListener("click", () => {
+  el.searchInput.value = "";
+  state.searchTerm = "";
+  el.searchClear.hidden = true;
+  renderPromptGrid();
+  el.searchInput.focus();
+});
+
+el.sortSelect.addEventListener("change", (e) => {
+  state.sortMode = e.target.value;
+  renderPromptGrid();
+});
+
+/* =========================================================================
+   9. KOPIEREN & "HEUTE KOPIERT"-ZÄHLER
+   ========================================================================= */
+
+async function copyPromptText(prompt, buttonEl) {
+  try {
+    await navigator.clipboard.writeText(prompt.promptText);
+  } catch (err) {
+    // Fallback für ältere/eingeschränkte Umgebungen
+    const ta = document.createElement("textarea");
+    ta.value = prompt.promptText;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch {}
+    document.body.removeChild(ta);
+  }
+
+  state.copyLog.push(new Date().toISOString());
+  await DataStore.saveCopyLog(state.copyLog);
+  renderStats();
+
+  if (buttonEl) {
+    const original = buttonEl.textContent;
+    buttonEl.textContent = "✅";
+    buttonEl.classList.add("copy-success");
+    setTimeout(() => {
+      buttonEl.textContent = original;
+      buttonEl.classList.remove("copy-success");
+    }, 1200);
+  }
+  showToast("Prompt in Zwischenablage kopiert", "success");
+}
+
+/* =========================================================================
+   10. LIGHTBOX
+   ========================================================================= */
+
+function openLightbox(images, startIndex = 0) {
+  if (!images || images.length === 0) return;
+  state.lightboxImages = images;
+  state.lightboxIndex = startIndex;
+  updateLightboxImage();
+  openOverlay(el.lightbox);
+}
+
+function updateLightboxImage() {
+  const img = state.lightboxImages[state.lightboxIndex];
+  if (img) el.lightboxImage.src = img.dataUrl;
+}
+
+document.getElementById("lightboxClose").addEventListener("click", () => closeOverlay(el.lightbox));
+document.getElementById("lightboxPrev").addEventListener("click", () => {
+  state.lightboxIndex = (state.lightboxIndex - 1 + state.lightboxImages.length) % state.lightboxImages.length;
+  updateLightboxImage();
+});
+document.getElementById("lightboxNext").addEventListener("click", () => {
+  state.lightboxIndex = (state.lightboxIndex + 1) % state.lightboxImages.length;
+  updateLightboxImage();
+});
+el.lightbox.addEventListener("click", (e) => {
+  if (e.target === el.lightbox) closeOverlay(el.lightbox);
+});
+
+/* =========================================================================
+   11. EINSTELLUNGEN
+   ========================================================================= */
+
+el.darkModeToggle.addEventListener("change", async (e) => {
+  state.settings.darkMode = e.target.checked;
+  document.documentElement.classList.toggle("theme-light", !state.settings.darkMode);
+  await DataStore.saveSettings(state.settings);
+});
+
+document.getElementById("btnExport").addEventListener("click", () => {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    categories: state.categories,
+    prompts: state.prompts
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `vindiprompts-export-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Export wurde heruntergeladen", "success");
+});
+
+el.importFileInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed.categories) || !Array.isArray(parsed.prompts)) {
+      throw new Error("Ungültiges Format");
+    }
+    const ok = await confirmDialog("Daten importieren?", "Bestehende Kategorien und Prompts werden ersetzt.");
+    if (!ok) { e.target.value = ""; return; }
+
+    state.categories = parsed.categories;
+    state.prompts = parsed.prompts;
+    await persist();
+    renderAll();
+    renderCategoryManagerList();
+    showToast("Import erfolgreich", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Import fehlgeschlagen: ungültige Datei", "error");
+  }
+  e.target.value = "";
+});
+
+document.getElementById("btnClearAll").addEventListener("click", async () => {
+  const ok = await confirmDialog(
+    "Wirklich alle Daten löschen?",
+    "Alle Kategorien, Prompts und Bilder werden unwiderruflich von diesem Gerät gelöscht."
+  );
+  if (!ok) return;
+
+  const seeded = DataStore._seed();
+  state.categories = seeded.categories;
+  state.prompts = seeded.prompts;
+  await persist();
+  renderAll();
+  renderCategoryManagerList();
+  closeOverlay(el.settingsModalOverlay);
+  showToast("Alle Daten wurden gelöscht", "success");
+});
+
+/* =========================================================================
+   12. MODALE DIALOGE & BESTÄTIGUNGEN
+   ========================================================================= */
+
+function openOverlay(overlayEl) {
+  overlayEl.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeOverlay(overlayEl) {
+  overlayEl.hidden = true;
+  const anyOpen = [el.promptModalOverlay, el.categoryModalOverlay, el.settingsModalOverlay, el.confirmOverlay, el.lightbox]
+    .some((o) => !o.hidden);
+  if (!anyOpen) document.body.style.overflow = "";
+}
+
+function confirmDialog(title, message) {
+  el.confirmTitle.textContent = title;
+  el.confirmMessage.textContent = message;
+  openOverlay(el.confirmOverlay);
+
+  return new Promise((resolve) => {
+    const cleanup = (result) => {
+      closeOverlay(el.confirmOverlay);
+      el.confirmOk.removeEventListener("click", onOk);
+      el.confirmCancel.removeEventListener("click", onCancel);
+      resolve(result);
+    };
+    const onOk = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    el.confirmOk.addEventListener("click", onOk);
+    el.confirmCancel.addEventListener("click", onCancel);
+  });
+}
+
+// Overlays per Klick auf Hintergrund oder Escape schließen
+[el.promptModalOverlay, el.categoryModalOverlay, el.settingsModalOverlay].forEach((overlay) => {
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      if (overlay === el.promptModalOverlay) closePromptModal();
+      else closeOverlay(overlay);
+    }
+  });
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!el.lightbox.hidden) closeOverlay(el.lightbox);
+  else if (!el.confirmOverlay.hidden) el.confirmCancel.click();
+  else if (!el.promptModalOverlay.hidden) closePromptModal();
+  else if (!el.categoryModalOverlay.hidden) closeOverlay(el.categoryModalOverlay);
+  else if (!el.settingsModalOverlay.hidden) closeOverlay(el.settingsModalOverlay);
+});
+
+/* =========================================================================
+   13. TOAST-BENACHRICHTIGUNGEN
+   ========================================================================= */
+
+function showToast(message, type = "default") {
+  const toast = document.createElement("div");
+  toast.className = `toast toast--${type}`;
+  toast.textContent = message;
+  el.toastStack.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("is-leaving");
+    setTimeout(() => toast.remove(), 200);
+  }, 2600);
+}
+
+/* =========================================================================
+   14. EVENT-WIRING & INITIALISIERUNG
+   ========================================================================= */
+
+document.getElementById("btnNewPrompt").addEventListener("click", () => openPromptModal(null));
+document.getElementById("btnEmptyNewPrompt").addEventListener("click", () => openPromptModal(null));
+document.getElementById("btnClosePromptModal").addEventListener("click", closePromptModal);
+document.getElementById("btnCancelPrompt").addEventListener("click", closePromptModal);
+
+document.getElementById("btnManageCategories").addEventListener("click", () => {
+  renderCategoryManagerList();
+  openOverlay(el.categoryModalOverlay);
+});
+document.getElementById("btnCloseCategoryModal").addEventListener("click", () => closeOverlay(el.categoryModalOverlay));
+
+document.getElementById("btnSettings").addEventListener("click", () => openOverlay(el.settingsModalOverlay));
+document.getElementById("btnCloseSettingsModal").addEventListener("click", () => closeOverlay(el.settingsModalOverlay));
+
+async function init() {
+  const data = await DataStore.load();
+  state.categories = data.categories;
+  state.prompts = data.prompts;
+  state.settings = await DataStore.loadSettings();
+  state.copyLog = await DataStore.loadCopyLog();
+
+  el.darkModeToggle.checked = state.settings.darkMode !== false;
+  document.documentElement.classList.toggle("theme-light", state.settings.darkMode === false);
+
+  await renderAll();
+
+  // Deep Link vom PWA-Shortcut: ?action=new öffnet direkt den Editor
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("action") === "new") {
+    openPromptModal(null);
+  }
+}
+
+init();
+
+
+</script>
+</body>
+</html>
