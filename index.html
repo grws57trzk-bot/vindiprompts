@@ -1569,8 +1569,18 @@ const DataStore = {
 
   /** Speichert den kompletten Datensatz. */
   async save(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    return data;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return data;
+    } catch (err) {
+      console.error("VinDiPrompt's: Speichern fehlgeschlagen", err);
+      const isQuota = err && (err.name === "QuotaExceededError" || err.code === 22);
+      throw new Error(
+        isQuota
+          ? "Der Speicherplatz auf diesem Gerät ist voll. Bitte entferne ein paar Bilder oder alte Prompts."
+          : "Speichern fehlgeschlagen."
+      );
+    }
   },
 
   /** Erste-Start-Standarddaten. */
@@ -1647,6 +1657,51 @@ function readFileAsDataURL(file) {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Verkleinert/komprimiert ein Bild vor dem Speichern im LocalStorage.
+ * Handyfotos sind oft mehrere MB groß — LocalStorage erlaubt aber nur
+ * ca. 5–10 MB PRO SEITE INSGESAMT. Ohne Kompression würden schon wenige
+ * Fotos das Limit sprengen und der komplette Speichervorgang schlägt
+ * (unbemerkt) fehl. Wir skalieren daher auf max. 1600px Kantenlänge und
+ * exportieren als JPEG mit moderater Qualität.
+ */
+function compressImageFile(file, maxDimension = 1280, quality = 0.74) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        if (width >= height) {
+          height = Math.round(height * (maxDimension / width));
+          width = maxDimension;
+        } else {
+          width = Math.round(width * (maxDimension / height));
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Bild konnte nicht gelesen werden"));
+    };
+
+    img.src = objectUrl;
   });
 }
 
@@ -2053,9 +2108,14 @@ el.promptForm.addEventListener("submit", async (e) => {
 
   const now = new Date().toISOString();
 
+  let isNewPrompt = false;
+  let editedBackup = null;
+  let newPromptRef = null;
+
   if (state.editingPromptId) {
     const p = state.prompts.find((x) => x.id === state.editingPromptId);
     if (p) {
+      editedBackup = { ...p };
       p.title = title;
       p.categoryId = el.promptCategory.value;
       p.description = el.promptDescription.value.trim();
@@ -2064,10 +2124,10 @@ el.promptForm.addEventListener("submit", async (e) => {
       p.favorite = el.promptFavorite.checked;
       p.images = state.editingImages;
       p.updatedAt = now;
-      showToast("Prompt aktualisiert", "success");
     }
   } else {
-    state.prompts.push({
+    isNewPrompt = true;
+    newPromptRef = {
       id: uid(),
       title,
       categoryId: el.promptCategory.value,
@@ -2078,11 +2138,26 @@ el.promptForm.addEventListener("submit", async (e) => {
       images: state.editingImages,
       createdAt: now,
       updatedAt: now
-    });
-    showToast("Prompt erstellt", "success");
+    };
+    state.prompts.push(newPromptRef);
   }
 
-  await persist();
+  try {
+    await persist();
+  } catch (err) {
+    // Fehlgeschlagenes Speichern rückgängig machen, damit der Zustand
+    // konsistent bleibt und der Nutzer seine Eingaben nicht verliert.
+    if (isNewPrompt) {
+      state.prompts = state.prompts.filter((x) => x !== newPromptRef);
+    } else if (editedBackup) {
+      const idx = state.prompts.findIndex((x) => x.id === editedBackup.id);
+      if (idx !== -1) state.prompts[idx] = editedBackup;
+    }
+    showToast(err.message || "Speichern fehlgeschlagen", "error");
+    return;
+  }
+
+  showToast(isNewPrompt ? "Prompt erstellt" : "Prompt aktualisiert", "success");
   closePromptModal();
   renderAll();
 });
@@ -2153,16 +2228,29 @@ function renderImagePreviewGrid() {
 
 el.imageFileInput.addEventListener("change", async (e) => {
   const files = Array.from(e.target.files || []);
+  let failCount = 0;
+  const SOFT_BUDGET_BYTES = 4 * 1024 * 1024; // Sicherheitsmarge unterhalb des Browser-Limits
+
   for (const file of files) {
     if (!file.type.startsWith("image/")) continue;
     try {
-      const dataUrl = await readFileAsDataURL(file);
+      const dataUrl = await compressImageFile(file);
       state.editingImages.push({ id: uid(), dataUrl });
     } catch (err) {
       console.error(err);
+      failCount++;
     }
   }
   renderImagePreviewGrid();
+  if (failCount > 0) {
+    showToast(`${failCount} Bild(er) konnten nicht verarbeitet werden`, "error");
+  }
+
+  const totalBytes = state.editingImages.reduce((sum, img) => sum + img.dataUrl.length, 0);
+  if (totalBytes > SOFT_BUDGET_BYTES) {
+    showToast("Viele/große Bilder in diesem Prompt — beim Speichern könnte der Gerätespeicher voll werden", "error");
+  }
+
   e.target.value = "";
 });
 
