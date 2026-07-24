@@ -710,6 +710,31 @@ body {
 .card-action--danger:hover { background: rgba(255,107,107,0.15); color: #FF8A8A; }
 .card-action.copy-success { color: var(--success); }
 
+.prompt-card__footer-spacer { flex: 1; }
+
+.card-action--copy-labeled {
+  width: auto;
+  border-radius: var(--radius-pill);
+  padding: 0 14px 0 10px;
+  gap: 6px;
+  background: rgba(79, 140, 255, 0.14);
+  border: 1px solid rgba(79, 140, 255, 0.3);
+  color: #A9C8FF;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.card-action--copy-labeled:hover {
+  background: rgba(79, 140, 255, 0.22);
+  color: #C6DBFF;
+}
+.card-action--copy-labeled.copy-success {
+  background: rgba(79, 209, 165, 0.16);
+  border-color: rgba(79, 209, 165, 0.4);
+  color: var(--success);
+}
+.card-action__icon { font-size: 14px; line-height: 1; }
+.card-action__label { line-height: 1; }
+
 /* =========================================================================
    EMPTY STATE
    ========================================================================= */
@@ -1816,7 +1841,10 @@ function buildPromptCard(p, index) {
       </div>
     ` : ""}
     <div class="prompt-card__footer">
-      <button class="card-action card-action--copy" title="Prompt kopieren" aria-label="Prompt kopieren">📋</button>
+      <button class="card-action card-action--copy card-action--copy-labeled" title="Prompt kopieren" aria-label="Prompt kopieren">
+        <span class="card-action__icon">📋</span><span class="card-action__label">Kopieren</span>
+      </button>
+      <span class="prompt-card__footer-spacer"></span>
       <button class="card-action card-action--edit" title="Bearbeiten" aria-label="Bearbeiten">✏️</button>
       <button class="card-action card-action--fav ${p.favorite ? "is-favorited" : ""}" title="Favorit" aria-label="Favorit umschalten">${p.favorite ? "❤️" : "🤍"}</button>
       <button class="card-action card-action--danger card-action--delete" title="Löschen" aria-label="Löschen">🗑</button>
@@ -2159,13 +2187,27 @@ async function copyPromptText(prompt, buttonEl) {
   renderStats();
 
   if (buttonEl) {
-    const original = buttonEl.textContent;
-    buttonEl.textContent = "✅";
+    const iconEl = buttonEl.querySelector(".card-action__icon");
+    const labelEl = buttonEl.querySelector(".card-action__label");
     buttonEl.classList.add("copy-success");
-    setTimeout(() => {
-      buttonEl.textContent = original;
-      buttonEl.classList.remove("copy-success");
-    }, 1200);
+    if (iconEl && labelEl) {
+      const originalIcon = iconEl.textContent;
+      const originalLabel = labelEl.textContent;
+      iconEl.textContent = "✅";
+      labelEl.textContent = "Kopiert";
+      setTimeout(() => {
+        iconEl.textContent = originalIcon;
+        labelEl.textContent = originalLabel;
+        buttonEl.classList.remove("copy-success");
+      }, 1200);
+    } else {
+      const original = buttonEl.textContent;
+      buttonEl.textContent = "✅";
+      setTimeout(() => {
+        buttonEl.textContent = original;
+        buttonEl.classList.remove("copy-success");
+      }, 1200);
+    }
   }
   showToast("Prompt in Zwischenablage kopiert", "success");
 }
