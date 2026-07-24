@@ -570,8 +570,27 @@ body {
 .prompt-card__header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+}
+
+.prompt-card__cover {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex: none;
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease);
+}
+.prompt-card__cover:hover { transform: scale(1.05); }
+
+.prompt-card__heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .prompt-card__title {
@@ -1823,12 +1842,15 @@ function buildPromptCard(p, index) {
 
   card.innerHTML = `
     <div class="prompt-card__header">
-      <h3 class="prompt-card__title">${escapeHtml(p.title)}</h3>
+      ${images.length ? `<img class="prompt-card__cover" src="${images[0].dataUrl}" alt="Vorschau zu ${escapeHtml(p.title)}">` : ""}
+      <div class="prompt-card__heading">
+        <h3 class="prompt-card__title">${escapeHtml(p.title)}</h3>
+        <span class="badge">${escapeHtml(categoryName(p.categoryId))}</span>
+      </div>
       ${p.favorite ? '<span class="prompt-card__fav-indicator" title="Favorit">❤️</span>' : ""}
     </div>
-    <span class="badge">${escapeHtml(categoryName(p.categoryId))}</span>
     ${p.description ? `<p class="prompt-card__description">${escapeHtml(p.description)}</p>` : ""}
-    ${images.length ? `
+    ${images.length > 1 ? `
       <div class="prompt-card__images">
         ${visibleImages.map((img, idx) => `<img class="prompt-card__thumb" src="${img.dataUrl}" data-img-index="${idx}" alt="Bild zu ${escapeHtml(p.title)}">`).join("")}
         ${extraCount > 0 ? `<div class="prompt-card__thumb-more">+${extraCount}</div>` : ""}
@@ -1850,6 +1872,10 @@ function buildPromptCard(p, index) {
       <button class="card-action card-action--danger card-action--delete" title="Löschen" aria-label="Löschen">🗑</button>
     </div>
   `;
+
+  if (images.length) {
+    card.querySelector(".prompt-card__cover").addEventListener("click", () => openLightbox(images, 0));
+  }
 
   card.querySelector(".card-action--copy").addEventListener("click", (e) => copyPromptText(p, e.currentTarget));
   card.querySelector(".card-action--edit").addEventListener("click", () => openPromptModal(p.id));
