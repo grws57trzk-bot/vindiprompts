@@ -1507,7 +1507,7 @@ html.theme-light .prompt-card__preview { background: rgba(11,16,32,0.04); color:
    VinDiPrompt's — Application Logic
    Reines ES6, kein Framework. Modular aufgebaut in klar getrennte Bereiche:
 
-     1.  DataStore-Abstraktion (aktuell LocalStorage, später Supabase)
+     1.  DataStore-Abstraktion (aktuell IndexedDB, später ggf. Supabase)
      2.  Utilities
      3.  App-State
      4.  Rendering
@@ -1533,10 +1533,19 @@ html.theme-light .prompt-card__preview { background: rgba(11,16,32,0.04); color:
    So kann später der komplette Block durch Supabase-Aufrufe ersetzt
    werden (z. B. supabase.from('prompts').select() usw.), ohne dass der
    Rest der App (Rendering, CRUD-Handler, UI) angepasst werden muss.
-   Alle Methoden sind bewusst als `async` deklariert, obwohl LocalStorage
-   synchron ist — das hält die Schnittstelle 1:1 kompatibel zu einem
-   späteren Cloud-Backend.
+
+   Speicher-Engine: IndexedDB statt LocalStorage.
+   LocalStorage ist auf ca. 5–10 MB PRO SEITE begrenzt — das reicht bei
+   vielen Prompts mit Fotos schnell nicht mehr aus. IndexedDB erlaubt
+   je nach Gerät/Browser typischerweise mehrere hundert MB bis in den
+   GB-Bereich und ist genau für solche größeren Datenmengen gedacht.
+   Bereits vorhandene Daten aus der alten LocalStorage-Version werden
+   beim ersten Start automatisch einmalig übernommen (Migration).
    ========================================================================= */
+
+const DB_NAME = "vindiprompts-db";
+const DB_VERSION = 1;
+const STORE_NAME = "kv";
 
 const STORAGE_KEY = "vindiprompts.data.v1";
 const SETTINGS_KEY = "vindiprompts.settings.v1";
@@ -1546,21 +1555,80 @@ const DEFAULT_CATEGORIES = [
   "Spaß", "Fotobearbeitung", "Videobearbeitung", "ChatGPT", "Gemini", "Claude", "Midjourney", "Sonstige"
 ];
 
+let _dbPromise = null;
+
+function openDatabase() {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) {
+      reject(new Error("IndexedDB wird von diesem Browser nicht unterstützt"));
+      return;
+    }
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(STORE_NAME)) {
+        request.result.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  return _dbPromise;
+}
+
+function idbGet(key) {
+  return openDatabase().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function idbSet(key, value) {
+  return openDatabase().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(value, key);
+    tx.oncomplete = () => resolve(value);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+/** Liest u. entfernt einmalig alte LocalStorage-Daten (Vor-IndexedDB-Version). */
+function readAndClearLegacyLocalStorage(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    localStorage.removeItem(key);
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 const DataStore = {
   /** Lädt den kompletten Datensatz { categories, prompts }. */
   async load() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
+    try {
+      const existing = await idbGet(STORAGE_KEY);
+      if (existing && existing.categories && existing.prompts) {
+        return existing;
+      }
+
+      // Einmalige Migration aus der alten LocalStorage-Version, falls vorhanden.
+      const legacy = readAndClearLegacyLocalStorage(STORAGE_KEY);
+      if (legacy && legacy.categories && legacy.prompts) {
+        await idbSet(STORAGE_KEY, legacy);
+        console.info("VinDiPrompt's: Bestehende Daten aus LocalStorage übernommen.");
+        return legacy;
+      }
+
       const seeded = DataStore._seed();
       await DataStore.save(seeded);
       return seeded;
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (!parsed.categories || !parsed.prompts) throw new Error("invalid shape");
-      return parsed;
     } catch (e) {
-      console.warn("VinDiPrompt's: Datensatz beschädigt, setze zurück.", e);
+      console.warn("VinDiPrompt's: Laden fehlgeschlagen, setze zurück.", e);
       const seeded = DataStore._seed();
       await DataStore.save(seeded);
       return seeded;
@@ -1570,7 +1638,7 @@ const DataStore = {
   /** Speichert den kompletten Datensatz. */
   async save(data) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      await idbSet(STORAGE_KEY, data);
       return data;
     } catch (err) {
       console.error("VinDiPrompt's: Speichern fehlgeschlagen", err);
@@ -1593,28 +1661,40 @@ const DataStore = {
 
   async loadSettings() {
     try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      return raw ? JSON.parse(raw) : { darkMode: true };
+      const existing = await idbGet(SETTINGS_KEY);
+      if (existing) return existing;
+      const legacy = readAndClearLegacyLocalStorage(SETTINGS_KEY);
+      if (legacy) {
+        await idbSet(SETTINGS_KEY, legacy);
+        return legacy;
+      }
+      return { darkMode: true };
     } catch {
       return { darkMode: true };
     }
   },
 
   async saveSettings(settings) {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    await idbSet(SETTINGS_KEY, settings);
   },
 
   async loadCopyLog() {
     try {
-      const raw = localStorage.getItem(COPYLOG_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const existing = await idbGet(COPYLOG_KEY);
+      if (existing) return existing;
+      const legacy = readAndClearLegacyLocalStorage(COPYLOG_KEY);
+      if (legacy) {
+        await idbSet(COPYLOG_KEY, legacy);
+        return legacy;
+      }
+      return [];
     } catch {
       return [];
     }
   },
 
   async saveCopyLog(log) {
-    localStorage.setItem(COPYLOG_KEY, JSON.stringify(log));
+    await idbSet(COPYLOG_KEY, log);
   }
 };
 
@@ -1668,7 +1748,7 @@ function readFileAsDataURL(file) {
  * (unbemerkt) fehl. Wir skalieren daher auf max. 1600px Kantenlänge und
  * exportieren als JPEG mit moderater Qualität.
  */
-function compressImageFile(file, maxDimension = 1280, quality = 0.74) {
+function compressImageFile(file, maxDimension = 1600, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -2229,7 +2309,6 @@ function renderImagePreviewGrid() {
 el.imageFileInput.addEventListener("change", async (e) => {
   const files = Array.from(e.target.files || []);
   let failCount = 0;
-  const SOFT_BUDGET_BYTES = 4 * 1024 * 1024; // Sicherheitsmarge unterhalb des Browser-Limits
 
   for (const file of files) {
     if (!file.type.startsWith("image/")) continue;
@@ -2244,11 +2323,6 @@ el.imageFileInput.addEventListener("change", async (e) => {
   renderImagePreviewGrid();
   if (failCount > 0) {
     showToast(`${failCount} Bild(er) konnten nicht verarbeitet werden`, "error");
-  }
-
-  const totalBytes = state.editingImages.reduce((sum, img) => sum + img.dataUrl.length, 0);
-  if (totalBytes > SOFT_BUDGET_BYTES) {
-    showToast("Viele/große Bilder in diesem Prompt — beim Speichern könnte der Gerätespeicher voll werden", "error");
   }
 
   e.target.value = "";
